@@ -1,0 +1,86 @@
+@page "/speech-recognition-test"
+@inject ISpeechApi SpeechApi
+
+<h3>Speech Recognition Test</h3>
+
+<div>
+    <label for="grammar">Grammar:</label>
+    <textarea id="grammar" @bind="grammar" rows="5" cols="40"></textarea>
+</div>
+
+<div>
+    <label for="language">Language:</label>
+    <input id="language" @bind="language" placeholder="e.g., en-US" />
+</div>
+
+<div>
+    <label>
+        <input type="checkbox" @bind="continuous" />
+        Continuous
+    </label>
+    <label>
+        <input type="checkbox" @bind="interimResults" />
+        Interim Results
+    </label>
+</div>
+
+<button @onclick="StartRecognition">Start Recognition</button>
+<button @onclick="StopRecognition">Stop Recognition</button>
+
+<h4>Recognition Result:</h4>
+<p>@result</p>
+
+@code {
+    private string grammar = "";
+    private string language = "en-US";
+    private bool continuous = false;
+    private bool interimResults = false;
+    private string? result = string.Empty;
+
+    protected override void OnInitialized()
+    {
+        SpeechApi.OnSpeechRecognized += HandleSpeechRecognized;
+        SpeechApi.OnError += HandleSpeechError;
+    }
+
+    private void HandleSpeechError(object? _, Exception ex)
+    {
+        Console.WriteLine($"Exception: {ex.Message}");
+    }
+
+    private void StartRecognition()
+    {
+        var options = new RecognitionOptions
+        {
+            Continuous = continuous,
+            InterimResults = interimResults,
+            Language = language,
+            Grammars = new List<SpeechGrammar>
+            {
+                new SpeechGrammar { Grammar = "#JSGF V1.0; grammar words; public <word> = ant | bear | apple;", Weight = 1.0f }
+            }
+        };
+
+        Console.WriteLine("SpeechRecognition clicked");
+        SpeechApi.StartRecognition(options);
+    }
+
+    private void StopRecognition()
+    {
+        SpeechApi.StopRecognition();
+    }
+
+    private void HandleSpeechRecognized(object? _, RecognitionResultEventArgs e)
+    {
+        // if (e.IsFinal)
+        {
+            result = e.Result;
+            StateHasChanged(); // Refresh the UI to show the result
+        }
+    }
+
+    public void Dispose()
+    {
+        SpeechApi.OnSpeechRecognized -= HandleSpeechRecognized;
+    }
+}
